@@ -102,9 +102,14 @@ const BootcampSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now 
-    }
+    }, 
     
-});
+},
+{
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true } 
+     }
+);
 
 // Create bootcamp slug from the name
 BootcampSchema.pre('save', function() {
@@ -127,9 +132,27 @@ BootcampSchema.pre('save', async function(next) {
         country: loc[0].countryCode
     }
 
-    // Do noy save address in DB
+    // Do not save address in DB
     this.address = undefined;
     next();
+
+    // Reverse populate with virtuals
+    
+});
+// Cascade Delete courses when a bootcamp is deleted
+//this will delete course related the erased bootcamp
+BootcampSchema.pre('remove', async function(next) {
+    console.log(`Courses being removed from bootcamp ${this.id}`)
+    await this.model('Course').deleteMany({ bootcamp: this._id });
+    next();
 })
+// Reverse populate with virtuals
+//this publish localfield ID -> on foreigh 'Course' DB where course are related to 'bootcamp'
+BootcampSchema.virtual('courses', {
+    ref: 'Course',
+    localField: '_id',
+    foreignField: 'bootcamp',
+    justOne: false
+});
 
 module.exports = mongoose.model('Bootcamp', BootcampSchema)
